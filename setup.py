@@ -7,6 +7,7 @@ setup(
     py_modules=['main'],
     install_requires=[
         'click',
+        'selenium',
     ],
     entry_points='''
         [console_scripts]

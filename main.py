@@ -1,5 +1,7 @@
 import click
 
+from bizu import *
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # command line interface
@@ -39,13 +41,13 @@ def logout():
 def index(ctx):
     """List courses to index."""
     if ctx.invoked_subcommand is None:
-        print('List courses to index')
+        idx_courses()
 
 @index.command('course')
 @click.argument('course')
 def index_course(course):
     """Index selected course."""
-    print('index {}'.format(course))
+    idx_course(course)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # download methods

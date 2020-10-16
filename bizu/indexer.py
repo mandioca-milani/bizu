@@ -1,19 +1,22 @@
 import re
+import time
 import importlib
 
+import click
 from bs4 import BeautifulSoup
 from tinydb import TinyDB, where
 
 
 db = TinyDB('data/db.json')
-base_url = 'https://promilitares.com.br/cursos'
+base_url = 'https://promilitares.com.br'
+
 
 def index_courses():
     if not db.table('courses').all():
         driver = importlib.import_module('bizu.webdriver').driver
 
-        if not driver.current_url == base_url:
-            driver.get(base_url)
+        if not driver.current_url == base_url + '/cursos':
+            driver.get(base_url + '/cursos')
 
         courses = [
             'afa-en-efomm',
@@ -42,6 +45,10 @@ def index_courses():
             }
         )
 
+        if not soup:
+            click.secho('An error ocurred on indexing courses!', fg='red')
+            return
+
         for index in range(len(soup)):
             db.table('courses').insert({
                 'title': soup[index].attrs['href'].split('/')[1],
@@ -49,11 +56,124 @@ def index_courses():
             })
 
     for course in db.table('courses').all():
-         print('→ {}'.format(course['title']))
+        click.secho('→ {}'.format(course['title']), fg='green')
+
 
 def index_course(course: str):
     if not db.table('courses').search(where('title') == course):
-        print('Course not found!')
+        click.secho('Course not found!', fg='red')
         return
-    
-    print(course)
+
+    course = db.table('courses').search(where('title') == course)[0]
+    modules = db.table('modules').search(where('course') == course['title'])
+
+    if not modules:
+        click.echo('Indexing {} modules.'.format(click.style(course['title'], fg='green')))
+
+        driver = importlib.import_module('bizu.webdriver').driver
+
+        if not driver.current_url == base_url + course['href']:
+            driver.get(base_url + course['href'])
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser').find_all(
+            'a', {
+                'href': re.compile(course['href'] + '/')
+            }
+        )
+
+        if not soup:
+            click.secho('An error ocurred on indexing modules!', fg='red')
+            return
+
+        for index in range(len(soup)):
+            db.table('modules').insert({
+                'title': soup[index].attrs['href'].split('/')[-1],
+                'course': course['title'],
+                'href': soup[index].attrs['href']
+            })
+
+        modules = db.table('modules').search(where('course') == course['title'])
+
+    click.echo('Indexed {} modules.'.format(click.style(course['title'], fg='green')))
+    time.sleep(0.3)
+
+    for module in modules:
+        seasons = db.table('seasons').search(
+            (where('course') == course['title']) & (where('module') == module['title'])
+        )
+
+        if not seasons:
+            click.echo('Indexing {} seasons.'.format(click.style(module['title'], fg='blue')))
+
+            driver = importlib.import_module('bizu.webdriver').driver
+
+            if not driver.current_url == base_url + module['href']:
+                driver.get(base_url + module['href'])
+
+            soup = BeautifulSoup(driver.page_source, 'html.parser').find_all(
+                'a', {
+                    'href': re.compile(
+                        '/'.join([
+                            module['href'].split('/')[1],
+                            module['href'].split('/')[3],
+                            module['href'].split('/')[2]
+                        ])
+                    )
+                }
+            )
+
+            if not soup:
+                click.secho('An error ocurred on indexing seasons!', fg='red')
+                continue
+
+            for index in range(len(soup)):
+                db.table('seasons').insert({
+                    'title': soup[index].attrs['href'].split('/')[-1],
+                    'course': course['title'],
+                    'module': module['title'],
+                    'href': soup[index].attrs['href']
+                })
+
+            seasons = db.table('seasons').search(
+                (where('course') == course['title']) & (where('module') == module['title'])
+            )
+
+        click.echo('Indexed {} seasons.'.format(click.style(module['title'], fg='blue')))
+        time.sleep(0.3)
+
+        for season in seasons:
+            lessons = db.table('lessons').search(
+                (where('course') == course['title']) &
+                (where('module') == module['title']) &
+                (where('season') == season['title'])
+            )
+
+            if not lessons:
+                click.echo('Indexing {} lessons.'.format(click.style(season['title'], fg='cyan')))
+
+                driver = importlib.import_module('bizu.webdriver').driver
+
+                if not driver.current_url == base_url + season['href']:
+                    driver.get(base_url + season['href'])
+
+                soup = BeautifulSoup(driver.page_source, 'html.parser').find_all(
+                    'a', {
+                        'href': re.compile(season['href'] + '/[\s\S]+')
+                    }
+                )
+
+                if not soup:
+                    click.secho('An error ocurred on indexing lessons!', fg='red')
+                    continue
+
+                for index in range(len(soup)):
+                    db.table('lessons').insert({
+                        'title': soup[index].attrs['href'].split('/')[-1],
+                        'course': course['title'],
+                        'module': module['title'],
+                        'season': season['title'],
+                        'href': soup[index].attrs['href']
+                    })
+
+            click.echo('Indexed {} lessons.'.format(click.style(season['title'], fg='cyan')))
+            time.sleep(0.1)

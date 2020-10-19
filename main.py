@@ -19,19 +19,19 @@ def cli():
 def auth(ctx):
     """Verify user auth."""
     if ctx.invoked_subcommand is None:
-        print('Verify user auth')
+        verify_auth()
 
 @auth.command()
 @click.option('-e', '--email', prompt=True)
 @click.option('-p', '--password', prompt=True, hide_input=True)
 def login(email, password):
     """Login user."""
-    print('Login user {}'.format(email))
+    auth_login(email, password)
 
 @auth.command()
 def logout():
     """Logout user."""
-    print('Logout user')
+    auth_logout()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # index commands

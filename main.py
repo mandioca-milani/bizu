@@ -57,9 +57,9 @@ def index_course(course):
 def download(ctx):
     """List courses to download."""
     if ctx.invoked_subcommand is None:
-        print('List courses to download')
+        idx_courses()
 
 @download.command('course')
 @click.argument('course')
 def download_course(course):
-    print('Download {}'.format(course))
+    dl_course(course)

@@ -113,10 +113,11 @@ def index_course(course: str):
             soup = BeautifulSoup(driver.page_source, 'html.parser').find_all(
                 'a', {
                     'href': re.compile(
-                        '/'.join([
-                            module['href'].split('/')[1],
-                            module['href'].split('/')[3],
-                            module['href'].split('/')[2]
+                        # /ita-ime/nivelamento-matematica/[0-9]{4}
+                        '/' + '/'.join([
+                            module['course'],
+                            module['title'],
+                            '[0-9]{4}'
                         ])
                     )
                 }

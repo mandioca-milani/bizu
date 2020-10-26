@@ -1,11 +1,10 @@
+import importlib
 import re
 import time
-import importlib
 
 import click
 from bs4 import BeautifulSoup
 from tinydb import TinyDB, where
-
 
 db = TinyDB('data/db.json')
 base_url = 'https://promilitares.com.br'
@@ -21,7 +20,6 @@ def index_courses():
         courses = [
             'afa-en-efomm',
             'aprendiz',
-            'carreira-militar',
             'cn-epcar',
             'colegio-naval',
             'eear',
@@ -97,23 +95,28 @@ def index_course(course: str):
     click.echo('Indexed {} modules.'.format(click.style(course['title'], fg='green')))
     time.sleep(0.3)
 
+    # {
+    #     "title": "nivelamento-matematica",
+    #     "course": "ita-ime",
+    #     "href": "/ita-ime/2019/nivelamento-matematica"
+    # }
     for module in modules:
         seasons = db.table('seasons').search(
-            (where('course') == course['title']) & (where('module') == module['title'])
+            (where('course') == course['title']) &
+            (where('module') == module['title'])
         )
 
-        if not seasons:
-            click.echo('Indexing {} seasons.'.format(click.style(module['title'], fg='blue')))
+        if not seasons:  # index seasons
+            if not 'driver' in locals():
+                driver = importlib.import_module('bizu.webdriver').driver
 
-            driver = importlib.import_module('bizu.webdriver').driver
-
-            if not driver.current_url == base_url + module['href']:
-                driver.get(base_url + module['href'])
+            # "https://promilitares.com.br/ita-ime/2019/nivelamento-matematica"
+            driver.get(base_url + module['href'])
 
             soup = BeautifulSoup(driver.page_source, 'html.parser').find_all(
                 'a', {
                     'href': re.compile(
-                        # /ita-ime/nivelamento-matematica/[0-9]{4}
+                        # "/ita-ime/nivelamento-matematica/[0-9]{4}"
                         '/' + '/'.join([
                             module['course'],
                             module['title'],
@@ -128,6 +131,12 @@ def index_course(course: str):
                 continue
 
             for index in range(len(soup)):
+                # {
+                #     "title": "nocoes-de-logica-matematica-e-conjuntos",
+                #     "course": "ita-ime",
+                #     "module": "nivelamento-matematica",
+                #     "href": "/ita-ime/nivelamento-matematica/2019/nocoes-de-logica-matematica-e-conjuntos"
+                # }
                 db.table('seasons').insert({
                     'title': soup[index].attrs['href'].split('/')[-1],
                     'course': course['title'],
@@ -136,7 +145,8 @@ def index_course(course: str):
                 })
 
             seasons = db.table('seasons').search(
-                (where('course') == course['title']) & (where('module') == module['title'])
+                (where('course') == course['title']) &
+                (where('module') == module['title'])
             )
 
         click.echo('Indexed {} seasons.'.format(click.style(module['title'], fg='blue')))
